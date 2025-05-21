@@ -24,32 +24,46 @@ if (!$conn) {
     $message = "Kritická chyba: Nepodařilo se připojit k databázi.";
     $message_type = "error";
 } else {
+    // Zpracování AJAX požadavků
+    if (isset($_POST['action']) && !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+        header('Content-Type: application/json');
+        $response = ['success' => false, 'message' => 'Neznámá akce.'];
+
+        if ($_POST['action'] == 'delete' && isset($_POST['pokemon_id'])) {
+            if (delete_pokemon($conn, $_POST['pokemon_id'], $response['message'], $response['message_type'])) {
+                $response['success'] = ($response['message_type'] == 'success'); // Úspěch jen pokud je message_type success
+            }
+        } elseif ($_POST['action'] == 'delete_multiple' && isset($_POST['pokemon_ids']) && is_array($_POST['pokemon_ids'])) {
+             if (delete_multiple_pokemons($conn, $_POST['pokemon_ids'], $response['message'], $response['message_type'])) {
+                $response['success'] = ($response['message_type'] == 'success');
+            }
+        } elseif ($_POST['action'] == 'add' && isset($_POST['name'])) {
+        }
+        echo json_encode($response);
+        $conn->close();
+        exit();
+    }
+
+    // Tradiční POST zpracování (pro přidání Pokémona, pokud AJAX není použit)
+    if ($_SERVER["REQUEST_METHOD"] == "POST" && !isset($_POST['ajax_request'])) { // Přidána kontrola pro ajax_request
+        if (isset($_POST['action'])) {
+            $action = $_POST['action'];
+            if ($action == 'add' && isset($_POST['name'])) {
+                add_pokemon($conn, $_POST, $message, $message_type);
+                 if (!empty($message)) {
+                    $_SESSION['message'] = $message;
+                    $_SESSION['message_type'] = $message_type;
+                }
+                header("Location: " . $_SERVER['PHP_SELF']); // Přesměrování jen pro tradiční POST
+                exit();
+            }
+        }
+    }
+    
     $seed_message = '';
     $seed_message_type = '';
     if (seed_initial_data($conn, $seed_message, $seed_message_type)) {
         // Zpráva je nastavena uvnitř funkce
-    }
-
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        if (isset($_POST['action'])) {
-            $action = $_POST['action'];
-
-            if ($action == 'add' && isset($_POST['name'])) {
-                add_pokemon($conn, $_POST, $message, $message_type);
-            } elseif ($action == 'delete' && isset($_POST['pokemon_id'])) {
-                delete_pokemon($conn, $_POST['pokemon_id'], $message, $message_type);
-            } elseif ($action == 'delete_multiple' && isset($_POST['pokemon_ids']) && is_array($_POST['pokemon_ids'])) {
-                delete_multiple_pokemons($conn, $_POST['pokemon_ids'], $message, $message_type);
-            }
-            
-            if (!empty($message)) {
-                $_SESSION['message'] = $message;
-                $_SESSION['message_type'] = $message_type;
-            }
-
-            header("Location: " . $_SERVER['PHP_SELF']);
-            exit();
-        }
     }
 
     if (isset($_SESSION['message'])) {
@@ -57,7 +71,7 @@ if (!$conn) {
         $message_type = $_SESSION['message_type'];
         unset($_SESSION['message']);
         unset($_SESSION['message_type']);
-    } elseif (!empty($seed_message)) { 
+    } elseif (!empty($seed_message) && empty($message)) { 
         $message = $seed_message;
         $message_type = $seed_message_type;
     }
@@ -108,7 +122,10 @@ if (!$conn) {
             </div>
         </header>
 
-        <?php if (!empty($message)): ?>
+        <!-- Místo pro AJAX zprávy -->
+        <div id="ajax-message-container"></div>
+
+        <?php if (!empty($message) && empty($_SERVER['HTTP_X_REQUESTED_WITH'])): // Zobrazí PHP zprávu jen pokud to není AJAX ?>
             <div class="message <?php echo htmlspecialchars($message_type); ?>">
                 <?php echo htmlspecialchars($message); ?>
             </div>
@@ -116,7 +133,8 @@ if (!$conn) {
         
         <div id="add-pokemon-form-container" class="form-section">
             <h2>Přidat Nového Pokémona</h2>
-            <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+            <!-- Formulář pro přidání Pokémona - zatím zůstává tradiční POST -->
+            <form id="add-pokemon-actual-form" method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
                 <input type="hidden" name="action" value="add">
                 <div><label for="name">Jméno:</label><input type="text" id="name" name="name" required></div>
                 <div><label for="hp">HP:</label><input type="number" id="hp" name="hp" min="1" required></div>
@@ -151,6 +169,7 @@ if (!$conn) {
         </div>
 
         <div class="type-book-container">
+            <!-- ... (Type book HTML) ... -->
             <div class="type-book-navigation">
                 <button id="prev-type-page" class="book-nav-arrow"><i class="fas fa-chevron-left"></i></button>
                 <h2 id="current-type-title">Všechny Typy</h2>
@@ -171,7 +190,8 @@ if (!$conn) {
         </div>
 
         <main class="pokedex-content">
-            <form id="multiple-delete-form" method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+            <!-- Formulář pro vícenásobné smazání - upraven pro AJAX -->
+            <form id="multiple-delete-form"> 
                 <input type="hidden" name="action" value="delete_multiple">
                 <div class="pokedex-grid">
                     <?php if (!$conn && empty($all_pokemons)): ?>
@@ -213,7 +233,8 @@ if (!$conn) {
                                         <p>Speed: <span><?php echo $pokemon['speed']; ?></span></p>
                                     </div>
                                 </div> 
-                                <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" class="delete-form" onsubmit="return confirm('Opravdu chcete smazat Pokémona <?php echo htmlspecialchars(addslashes($pokemon['name'])); ?>?');">
+                                <!-- Formulář pro smazání jednotlivce - upraven pro AJAX -->
+                                <form class="delete-form-single">
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="pokemon_id" value="<?php echo $pokemon['id']; ?>">
                                     <button type="submit" class="delete-button"><i class="fas fa-trash-alt"></i> Smazat</button>
@@ -227,6 +248,17 @@ if (!$conn) {
             </form> 
         </main>
     </div> 
+
+    <div id="custom-modal-overlay" class="modal-overlay">
+        <div id="custom-modal" class="modal-content">
+            <p id="custom-modal-text"></p>
+            <div class="modal-buttons">
+                <button id="custom-modal-confirm" class="action-button">Potvrdit</button>
+                <button id="custom-modal-cancel" class="action-button delete-button">Zrušit</button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>

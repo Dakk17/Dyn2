@@ -14,7 +14,7 @@
     --accent-rune-stone: #6f5a40; 
     --delete-blood-red: #9c2020;
 
-    /* Barvy */
+    /* Type Colors */
     --type-grass: #6ab94f; --type-grass-text: #fff;
     --type-fire: #f0772c; --type-fire-text: #fff;
     --type-water: #5e88ec; --type-water-text: #fff;
@@ -55,26 +55,18 @@ body {
 .layer-far {background-image: url('https://www.transparenttextures.com/patterns/concrete-wall-3.png'); opacity: 0.1; background-blend-mode: overlay;}
 .layer-mid {background-image: url('https://www.transparenttextures.com/patterns/crosshatch.png'); opacity: 0.07; background-blend-mode: multiply;}
 .layer-near { background-image: url('https://www.transparenttextures.com/patterns/random-grey-variations.png');opacity: 0.05;background-blend-mode: screen;background-size: 200px 200px;}
-
 .page-content {position: relative;z-index: 1;padding: 20px;max-width: 1300px;margin: 0 auto;}
-
 .main-header {text-align: center;margin-bottom: 30px;padding: 30px 0;border-bottom: 2px dashed var(--ink-drawing-color);}
 .main-header h1 {font-family: var(--font-fantasy);font-size: clamp(2.5em, 5vw, 3.8em);color: var(--ink-drawing-color);margin: 0 0 20px 0; text-shadow: 1px 1px 0px rgba(253, 250, 242, 0.7); letter-spacing: 1.5px;}
 .header-buttons {
     display: flex;
+    justify-content: center; /* Centruje, když je jen 1, nebo skupinu, když jsou 2 */
     align-items: center; 
     gap: 20px; 
     flex-wrap: wrap;
     min-height: 50px; 
-    /* Výchozí zarovnání na střed, když je jen jedno tlačítko viditelné */
-    justify-content: center; 
 }
-
-/* Když jsou aktivní obě tlačítka (třída přidaná JS) */
-.header-buttons.multiple-active {
-    /* justify-content: space-around; */
-}
-
+/* Není potřeba .header-buttons.multiple-active pro desktop centrování, pokud gap a flex-wrap stačí */
 
 .action-button, .delete-button, .book-nav-arrow {font-family: var(--font-fantasy);font-weight: 700;background-image: linear-gradient(to bottom, #e8e0d0, #d8ccbb); color: var(--ink-drawing-color);border: 2px solid var(--ink-drawing-color);padding: 12px 25px;border-radius: 8px;cursor: pointer;font-size: 1em;transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);text-transform: uppercase;letter-spacing: 1px;box-shadow: 2px 2px 4px rgba(0,0,0,0.12), inset 0 -2px 2px rgba(0,0,0,0.06);text-shadow: none;outline: none;display: inline-flex; align-items: center;justify-content: center;}
 .action-button:hover, .delete-button:hover, .book-nav-arrow:hover {background-image: linear-gradient(to bottom, #d8ccbb, #c8bba8);color: var(--text-dark-wood); transform: translateY(-2px);box-shadow: 3px 3px 6px rgba(0,0,0,0.18), inset 0 -1px 1px rgba(0,0,0,0.04);}
@@ -101,7 +93,7 @@ body {
     max-width: 680px; 
     max-height: 0; 
     opacity: 0;   
-    overflow: hidden; 
+    overflow: hidden; /* DŮLEŽITÉ pro animaci maxHeight */
     box-shadow: 0 8px 20px rgba(92, 80, 67, 0.15); 
     color: var(--ink-drawing-color);
     transition: max-height 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55), 
@@ -111,12 +103,13 @@ body {
                 margin-top 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
 }
 .form-section.form-shown { 
-    max-height: 1200px; /* Pevná dostatečně velká hodnota */
+    max-height: 1200px; /* Pevná, dostatečně velká hodnota */
     opacity: 1;
     padding-top: 30px;
     padding-bottom: 30px;
     margin-top: 40px;
-    overflow: auto; /* Změna na auto pro případ, že by obsah přetekl 1200px */
+    /* overflow: auto; /* Ponechám hidden, aby se obsah vešel do max-height,
+                        pokud by 1200px bylo málo, je třeba ji zvýšit */
 }
 
 .form-section h2 {font-family: var(--font-fantasy);color: var(--ink-drawing-color);text-align: center;font-size: 1.8em;margin-top: 0; margin-bottom: 25px;text-shadow: none;}
@@ -132,22 +125,29 @@ body {
 .form-section select::-ms-expand {display: none;}
 .form-submit-button { display: block; margin-left: auto;margin-right: auto;margin-top: 30px; width: fit-content; }
 
-/* Styl pro tlačítko vícenásobného smazání */
+/* Styl pro tlačítko vícenásobného smazání - nyní vždy viditelné */
 .delete-multiple-btn {
     background-image: linear-gradient(to bottom, var(--delete-blood-red), #7a1818);
     border-color: #6b1010;
     color: var(--bg-page-parchment);
-    /* opacity: 0; */
-    /* transform: translateY(10px) scale(0.9); */
-    /* pointer-events: none; */
     transition: background-image 0.3s ease, border-color 0.3s ease; /* Pouze přechod pro hover */
     font-size: 1.1em;
 }
-/* .delete-multiple-btn.btn-visible -> není potřeba, tlačítko je vždy viditelné */
 .delete-multiple-btn:hover {
     background-image: linear-gradient(to bottom, #7a1818, #5c0c0c);
     border-color: #4a0808;
 }
+
+/* Styly pro Custom Modal */
+.modal-overlay {position: fixed;top: 0;left: 0;width: 100%;height: 100%;background-color: rgba(0, 0, 0, 0.65); display: flex;justify-content: center;align-items: center;z-index: 1000; opacity: 0;pointer-events: none;transition: opacity 0.3s ease-in-out;}
+.modal-overlay.visible {opacity: 1;pointer-events: auto;}
+.modal-content {background-color: var(--bg-page-parchment);padding: 30px 40px;border-radius: 12px;border: 3px solid var(--ink-drawing-color);box-shadow: 0 10px 30px rgba(0,0,0,0.25);text-align: center;color: var(--ink-drawing-color);max-width: 450px;width: 90%;transform: scale(0.9) translateY(-20px);transition: transform 0.3s ease-in-out 0.1s, opacity 0.3s ease-in-out 0.1s;opacity: 0; }
+.modal-overlay.visible .modal-content {transform: scale(1) translateY(0);opacity: 1;}
+#custom-modal-text {font-size: 1.2em;margin-bottom: 25px;line-height: 1.5;}
+.modal-buttons {display: flex;justify-content: center; gap: 20px; }
+.modal-buttons .action-button {padding: 10px 20px;font-size: 1em;}
+.modal-buttons .delete-button {background-image: linear-gradient(to bottom, #c8bba8, #b0a290); border-color: #9e804a;}
+.modal-buttons .delete-button:hover {background-image: linear-gradient(to bottom, #b0a290, #978a78);}
 
 
 .message {padding: 18px 25px;margin: 25px 0;border-radius: 8px;text-align: center;font-weight: bold;font-size: 1.05em;box-shadow: 0 3px 6px rgba(92, 80, 67, 0.1);}

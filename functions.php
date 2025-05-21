@@ -1,6 +1,5 @@
 <?php
 // functions.php
-
 function seed_initial_data($conn, &$message, &$message_type) {
     $sql_check = "SELECT COUNT(*) as count FROM pokemons";
     $result_check = $conn->query($sql_check);
